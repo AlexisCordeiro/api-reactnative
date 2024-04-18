@@ -5,11 +5,12 @@ import { FontAwesome, MaterialCommunityIcons } from "@expo/vector-icons";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import styles from "./style";
 import { signOut } from "firebase/auth";
-
+import {API_URL, deleteProduct, getAllProducts}  from "../../config/APIConfig";
+import axios from "axios";
 
 
 const Task = ({ navigation, route }) => {
-    const [tasks, setTasks] = useState([]);
+    const [products, setProducts] = useState([]);
 
     const auth = FIREBASE_AUTH;
 
@@ -22,25 +23,22 @@ const Task = ({ navigation, route }) => {
         }
     }
     
-
-    async function deleteTask(id) {
+    
+    const deleteID = async (productId) => {
         try {
-            await deleteDoc(doc(FIREBASE_DB, route.params.idUser, id));
-            setTasks(tasks.filter(task => task.id !== id));
+            await deleteProduct(productId);
+            const updatedProducts = products.filter(product => product.id !== productId);
+            setProducts(updatedProducts);
         } catch (error) {
-            console.error("Error deleting task: ", error);
+            console.error("Error deleting product: ", error);
         }
-    }
+    };
 
     useEffect(() => {
         const fetchTasks = async () => {
             try {
-                const querySnapshot = await getDocs(collection(FIREBASE_DB, route.params.idUser));
-                const list = [];
-                querySnapshot.forEach((doc) => {
-                    list.push({ ...doc.data(), id: doc.id });
-                });
-                setTasks(list);
+                const response = await getAllProducts();
+                setProducts(response.data); 
             } catch (error) {
                 console.error("Error fetching tasks: ", error);
             }
@@ -53,24 +51,30 @@ const Task = ({ navigation, route }) => {
         <View style={styles.container}>
             <FlatList
                 showsVerticalScrollIndicator={false}
-                data={tasks}
+                data={products}
                 renderItem={({ item }) => (
                     <View style={styles.Tasks}>
-                        <TouchableOpacity style={styles.deleteTask} onPress={() => deleteTask(item.id)}>
+                        <TouchableOpacity style={styles.deleteTask} onPress={() => deleteID(item.id)}>
                             <FontAwesome name="check" size={23} color={"#120A8F"} />
                         </TouchableOpacity>
                         <Text style={styles.DescriptionTask} onPress={() => {
                             navigation.navigate("Details", {
                                 id: item.id,
+                                name: item.name,
                                 description: item.description,
+                                price: item.price,
                                 idUser: route.params.idUser
                             });
                         }}>
-                            {item.description}
+                            {item.id},
+                            {item.name},
+                            {item.price},
+                            {item.description},
+                            
                         </Text>
                     </View>
                 )}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => item.id.toString()}
             />
             <TouchableOpacity style={styles.buttonNewTask} onPress={() => navigation.navigate("NewTask", {idUser: route.params.idUser})}>
                 <Text style={styles.iconButton}>+</Text>
